@@ -1,0 +1,112 @@
+version: "3.9"
+
+networks:
+  infracore:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+
+services:
+  # ── Database ──────────────────────────────────────────────────────────────
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: infracore-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: infracore
+      POSTGRES_USER: infracore
+      POSTGRES_PASSWORD: infracore_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - infracore
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U infracore -d infracore"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Cache ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: infracore-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - infracore
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  migrate:
+    image: migrate/migrate:v4.17.1
+    container_name: infracore-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations/postgres:/migrations:ro
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://infracore:infracore_secret@postgres:5432/infracore?sslmode=disable"
+      - "up"
+    networks:
+      - infracore
+    restart: "no"
+
+  # ── API (Go backend) ──────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: infracore-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      INFRACORE_APP_ENVIRONMENT: production
+      INFRACORE_DATABASE_HOST: postgres
+      INFRACORE_DATABASE_PORT: "5432"
+      INFRACORE_DATABASE_NAME: infracore
+      INFRACORE_DATABASE_USER: infracore
+      INFRACORE_DATABASE_PASSWORD: infracore_secret
+      INFRACORE_REDIS_HOST: redis
+      INFRACORE_REDIS_PORT: "6379"
+      INFRACORE_AUTH_JWT_ACCESS_SECRET: "change-me-in-production-access-secret"
+      INFRACORE_AUTH_JWT_REFRESH_SECRET: "change-me-in-production-refresh-secret"
+    ports:
+      - "8080:8080"
+    networks:
+      - infracore
+
+  # ── Frontend (React / Vite) ───────────────────────────────────────────────
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api/v1
+        VITE_USE_MOCKS: "true"
+    container_name: infracore-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+    networks:
+      - infracore

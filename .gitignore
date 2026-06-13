@@ -1,0 +1,29 @@
+# Go build and test output
+/build/
+*.exe
+*.test
+*.out
+coverage.html
+
+# Frontend dependencies and generated output
+web/node_modules/
+web/dist/
+web/*.tsbuildinfo
+web/vite.config.js
+web/vite.config.d.ts
+
+# Environment and local configuration
+.env
+.env.*
+!.env.example
+
+# Runtime data and logs
+*.log
+data/
+.runtime/
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

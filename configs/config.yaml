@@ -1,0 +1,140 @@
+app:
+  name: InfraCore
+  version: "1.0.0"
+  environment: development   # development | staging | production
+  debug: true
+  base_url: "http://localhost:8080"
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 120s
+  shutdown_timeout: 15s
+  max_request_body_mb: 10
+
+database:
+  host: localhost
+  port: 5432
+  name: infracore
+  user: infracore
+  password: infracore_secret
+  ssl_mode: disable           # disable | require | verify-full
+  max_open_conns: 25
+  max_idle_conns: 10
+  conn_max_lifetime: 5m
+  conn_max_idle_time: 30s
+  log_slow_queries: true
+  slow_query_threshold: 500ms
+
+timescale:
+  # Inherits postgres config; TimescaleDB runs on same instance
+  # Retention policies are configured in migration 000006
+  metric_retention_days: 365
+  agent_metric_retention_days: 90
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+  pool_size: 10
+  min_idle_conns: 5
+  conn_timeout: 5s
+  read_timeout: 3s
+  write_timeout: 3s
+
+auth:
+  jwt_access_secret: "CHANGE_ME_IN_PRODUCTION_USE_256_BIT_KEY"
+  jwt_refresh_secret: "CHANGE_ME_IN_PRODUCTION_USE_256_BIT_KEY_2"
+  access_token_ttl: 15m
+  refresh_token_ttl: 720h   # 30 days
+  max_failed_logins: 5
+  lockout_duration: 15m
+  bcrypt_cost: 12
+
+cors:
+  allowed_origins:
+    - "http://localhost:3000"
+    - "http://localhost:5173"
+    - "http://127.0.0.1:5173"
+    - "http://127.0.0.1:3000"
+  allowed_methods:
+    - GET
+    - POST
+    - PUT
+    - PATCH
+    - DELETE
+    - OPTIONS
+  allowed_headers:
+    - "Content-Type"
+    - "Authorization"
+    - "X-Tenant-ID"
+    - "X-Request-ID"
+  expose_headers:
+    - "X-Total-Count"
+    - "X-Request-ID"
+  max_age: 86400
+
+rate_limit:
+  enabled: true
+  requests_per_minute: 600
+  burst: 100
+  auth_requests_per_minute: 20  # stricter limit for /auth endpoints
+
+logging:
+  level: debug             # debug | info | warn | error
+  format: console          # console | json
+  output: stdout
+  file_path: ""            # set to enable file logging
+  max_size_mb: 100
+  max_backups: 3
+  max_age_days: 30
+
+agent:
+  heartbeat_interval: 30s          # how often agents send heartbeat
+  offline_threshold: 120s          # mark agent offline after N seconds silence
+  task_expiry: 1h
+  grpc_port: 50051
+  grpc_max_recv_size_mb: 16
+  grpc_max_send_size_mb: 16
+
+monitoring:
+  default_check_interval: 60s
+  default_retry_interval: 30s
+  default_max_retries: 3
+  metric_batch_size: 500           # points per TimescaleDB batch write
+  metric_flush_interval: 10s
+
+alerting:
+  evaluation_interval: 60s
+  notification_workers: 5
+  max_retry_attempts: 3
+  retry_backoff_base: 30s
+
+discovery:
+  scan_timeout: 300s
+  max_concurrent_hosts: 256
+
+encryption:
+  # AES-256-GCM key for encrypting sensitive fields (SSH keys, SNMP passwords, etc.)
+  # Must be 32 bytes (256-bit), base64-encoded
+  secret_key: "CHANGE_ME_32_BYTE_AES_KEY_BASE64"
+
+smtp:
+  host: ""
+  port: 587
+  username: ""
+  password: ""
+  from_address: "noreply@infracore.example.com"
+  from_name: "InfraCore Alerts"
+  use_tls: true
+
+swagger:
+  enabled: true
+  host: "localhost:8080"
+  base_path: "/api/v1"
+  title: "InfraCore API"
+  description: "Enterprise Infrastructure Management Platform"
+  version: "1.0.0"

@@ -1,0 +1,9 @@
+-- 000003_dcim.down.sql
+DROP TABLE IF EXISTS cable_terminations;
+DROP TABLE IF EXISTS cables;
+DROP TABLE IF EXISTS patch_panels;
+DROP TABLE IF EXISTS pdus;
+DROP TABLE IF EXISTS power_feeds;
+DROP TABLE IF EXISTS racks;
+DROP TABLE IF EXISTS rooms;
+DROP TABLE IF EXISTS data_centers;
